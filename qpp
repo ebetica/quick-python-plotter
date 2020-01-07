@@ -1,0 +1,159 @@
+#!python3
+import argparse
+import sys
+import inspect
+import shutil
+from os import path
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import collections
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+def read_data():
+    data = collections.OrderedDict()
+    acc = []
+    key = None
+    for line in sys.stdin:
+        line = line.strip()
+        if line == "":
+            continue
+        try:
+            acc.append([float(x) for x in line.split()])
+        except ValueError:
+            if len(acc) == 0:
+                key = line
+            elif line == "END":
+                if key is None:
+                    key = str(len(data))
+                data[key] = acc
+                acc = []
+                key = None
+            else:
+                raise RuntimeError("Cannot convert '" + line + "' to float")
+    if len(acc) > 0:
+        if key is None:
+            key = str(len(data))
+        data[key] = acc
+    return data
+
+
+def moving_average(a, n=10):
+    if n > len(a):
+        n = len(a) - 1
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1 :] / n
+
+
+def plotargs(parser):
+    parser.add_argument("--ymin", default=None, type=float)
+    parser.add_argument("--ymax", default=None, type=float)
+    parser.add_argument("--xlab", "-x", default=None, type=str)
+    parser.add_argument("--ylab", "-y", default=None, type=str)
+    parser.add_argument("--title", "-t", default=None, type=str)
+    parser.add_argument("--format", "-f", default="png", type=str)
+
+
+def outplot(args):
+    plt.ylim(ymin=args.ymin) if args.ymin is not None else None
+    plt.ylim(ymax=args.ymax) if args.ymax is not None else None
+    plt.xlabel(args.xlab) if args.xlab is not None else None
+    plt.ylabel(args.ylab) if args.ylab is not None else None
+    plt.title(args.title) if args.title is not None else None
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.savefig(sys.stdout.buffer, bbox_inches="tight", format=args.format)
+
+
+class cat:
+    @staticmethod
+    def args(parser):
+        """Prints each series with the line seperator END"""
+        parser.add_argument("files", type=str, nargs="+", help="Files to cat together")
+
+    @staticmethod
+    def run(args):
+        for fp in args.files:
+            with open(fp, "r") as f:
+                print(path.basename(fp))
+                shutil.copyfileobj(f, sys.stdout)
+                print("END")
+
+
+class line:
+    """
+    Takes in either a 1 or 2 tuple. 1 tuples are a list of y values, 2 tuples are x y values
+    """
+
+    @staticmethod
+    def args(parser):
+        plotargs(parser)
+        parser.add_argument(
+            "--smooth", "-s", type=int, default=1, help="Window of moving average"
+        )
+        parser.add_argument("--xmin", default=None, type=float)
+        parser.add_argument("--xmax", default=None, type=float)
+
+    @staticmethod
+    def run(args):
+        data = read_data()
+        for key, series in data.items():
+            series = np.asarray(series)
+            if series.shape[1] == 1:
+                y = moving_average(series[:, 0], args.smooth)
+                plt.plot(y, label=key)
+            elif series.shape[1] == 2:
+                x = series[:, 0]
+                y = moving_average(series[:, 1], args.smooth)
+                plt.plot(x, y, label=key)
+            else:
+                raise RuntimeError("Too many values for lineplot")
+        plt.xlim(xmin=args.xmin) if args.xmin is not None else None
+        plt.xlim(xmax=args.xmax) if args.xmax is not None else None
+        outplot(args)
+
+
+class hist:
+    @staticmethod
+    def args(parser):
+        plotargs(parser)
+        parser.add_argument("--bins", default=None, type=int)
+        parser.add_argument("--log", action='store_true')
+        parser.add_argument(
+            "--histtype",
+            default="bar",
+            choices=["bar", "barstacked", "step", "stepfilled"],
+        )
+
+    def run(args):
+        data = read_data()
+        labels = []
+        series = []
+        for key, d in data.items():
+            labels.append(key)
+            series.append(np.asarray(d)[:, 0])
+        bins = "auto" if args.bins is None else args.bins
+        plt.hist(series, bins=bins, label=labels, histtype=args.histtype, log=args.log)
+        outplot(args)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(help="What command do I run?")
+
+    clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    for name, cls in clsmembers:
+        subparser = subparsers.add_parser(name, help=inspect.getdoc(cls))
+        subparser.set_defaults(which=name)
+        cls.args(subparser)
+
+    args = parser.parse_args()
+
+    dict(clsmembers)[args.which].run(args)
