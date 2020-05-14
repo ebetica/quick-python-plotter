@@ -53,13 +53,24 @@ def moving_average(a, n=10):
     return ret[n - 1 :] / n
 
 
+TRANSFORMS = {
+    "none": lambda x: x,
+    "log": lambda x: np.log10(x),
+    "log1p": lambda x: np.log10(1 + x),
+}
+
+
 def plotargs(parser):
     parser.add_argument("--ymin", default=None, type=float)
     parser.add_argument("--ymax", default=None, type=float)
     parser.add_argument("--xlab", "-x", default=None, type=str)
     parser.add_argument("--ylab", "-y", default=None, type=str)
     parser.add_argument("--title", "-t", default=None, type=str)
+    parser.add_argument("--no-legend", dest="legend", action='store_false')
+    parser.set_defaults(legend=True)
     parser.add_argument("--format", "-f", default="png", type=str)
+    parser.add_argument("--x-transform", default="none", choices=TRANSFORMS.keys(), type=str)
+    parser.add_argument("--y-transform", default="none", choices=TRANSFORMS.keys(), type=str)
 
 
 def outplot(args):
@@ -68,7 +79,8 @@ def outplot(args):
     plt.xlabel(args.xlab) if args.xlab is not None else None
     plt.ylabel(args.ylab) if args.ylab is not None else None
     plt.title(args.title) if args.title is not None else None
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    if args.legend:
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.savefig(sys.stdout.buffer, bbox_inches="tight", format=args.format)
 
 
@@ -96,27 +108,37 @@ class line:
     def args(parser):
         plotargs(parser)
         parser.add_argument(
-            "--smooth", "-s", type=int, default=1, help="Window of moving average"
+            "--smooth", "-s", default=1, help="Window of moving average. Use float for percent of data"
         )
         parser.add_argument("--xmin", default=None, type=float)
         parser.add_argument("--xmax", default=None, type=float)
 
     @staticmethod
     def run(args):
+        args.smooth = float(args.smooth)
         data = read_data()
         for key, series in data.items():
             series = np.asarray(series)
+            smooth = int(args.smooth) if args.smooth > 1 else max(1, int(args.smooth * series.shape[0]))
+            if args.smooth > 1:
+                smooth = int(smooth)
             if series.shape[1] == 1:
-                y = moving_average(series[:, 0], args.smooth)
-                plt.plot(y, label=key)
+                y = series[:, 0]
+                x = np.asarray(range(len(y)))
             elif series.shape[1] == 2:
-                x = series[:, 0]
-                y = moving_average(series[:, 1], args.smooth)
-                plt.plot(x, y, label=key)
+                y = series[:, 1]
+                x = series[smooth-1:, 0]
             else:
                 raise RuntimeError("Too many values for lineplot")
+
+            y = TRANSFORMS[args.y_transform](y)
+            x = TRANSFORMS[args.x_transform](x)
+            y = moving_average(y, smooth)
+            plt.plot(x, y, label=key)
         plt.xlim(xmin=args.xmin) if args.xmin is not None else None
         plt.xlim(xmax=args.xmax) if args.xmax is not None else None
+        if len(data) == 1:
+            args.legend = False
         outplot(args)
 
 
@@ -141,6 +163,27 @@ class hist:
             series.append(np.asarray(d)[:, 0])
         bins = "auto" if args.bins is None else args.bins
         plt.hist(series, bins=bins, label=labels, histtype=args.histtype, log=args.log)
+        outplot(args)
+
+
+class heatmap:
+    @staticmethod
+    def args(parser):
+        plotargs(parser)
+        parser.add_argument("--vmin", default=None, type=float)
+        parser.add_argument("--vmax", default=None, type=float)
+
+    def run(args):
+        data = read_data()
+        assert len(data) == 1, "heatmaps only support a single series"
+        k, v = next(iter(data.items()))
+        v = [x for lst in v for x in lst]
+        N = int(np.sqrt(len(v)))
+        assert len(v) == N*N, "Heatmap is not square..."
+        data = np.asarray(v).reshape((N, N))
+        data = TRANSFORMS[args.y_transform](data)
+        sns.heatmap(data, cmap="coolwarm", vmin=args.vmin, vmax=args.vmax, square=True).set_title(k)
+        args.legend = False
         outplot(args)
 
 

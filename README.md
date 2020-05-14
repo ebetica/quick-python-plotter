@@ -5,5 +5,5 @@ Examples:
 
 Line plot
 ```
-python -c 'import numpy as np; print("\n".join(str(x) for x in np.random.randn(100)))' | pqp line | display
+python -c 'import numpy as np; print("\n".join(str(x) for x in np.random.randn(100)))' | qpp line | display
 ```
