@@ -112,6 +112,9 @@ class line:
         )
         parser.add_argument("--xmin", default=None, type=float)
         parser.add_argument("--xmax", default=None, type=float)
+        parser.add_argument("--xlabel", default=None, type=str)
+        parser.add_argument("--ylabel", default=None, type=str)
+
 
     @staticmethod
     def run(args):
@@ -119,12 +122,12 @@ class line:
         data = read_data()
         for key, series in data.items():
             series = np.asarray(series)
-            smooth = int(args.smooth) if args.smooth > 1 else max(1, int(args.smooth * series.shape[0]))
+            smooth = int(args.smooth) if args.smooth >= 1 else max(1, int(args.smooth * series.shape[0]))
             if args.smooth > 1:
                 smooth = int(smooth)
             if series.shape[1] == 1:
                 y = series[:, 0]
-                x = np.asarray(range(len(y)))
+                x = np.asarray(range(smooth-1, len(y)))
             elif series.shape[1] == 2:
                 y = series[:, 1]
                 x = series[smooth-1:, 0]
@@ -135,6 +138,8 @@ class line:
             x = TRANSFORMS[args.x_transform](x)
             y = moving_average(y, smooth)
             plt.plot(x, y, label=key)
+        if args.xlabel: plt.xlabel(args.xlabel)
+        if args.ylabel: plt.ylabel(args.ylabel)
         plt.xlim(xmin=args.xmin) if args.xmin is not None else None
         plt.xlim(xmax=args.xmax) if args.xmax is not None else None
         if len(data) == 1:
