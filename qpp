@@ -63,6 +63,8 @@ TRANSFORMS = {
 def plotargs(parser):
     parser.add_argument("--ymin", default=None, type=float)
     parser.add_argument("--ymax", default=None, type=float)
+    parser.add_argument("--xmin", default=None, type=float)
+    parser.add_argument("--xmax", default=None, type=float)
     parser.add_argument("--xlab", "-x", default=None, type=str)
     parser.add_argument("--ylab", "-y", default=None, type=str)
     parser.add_argument("--title", "-t", default=None, type=str)
@@ -76,6 +78,8 @@ def plotargs(parser):
 def outplot(args):
     plt.ylim(ymin=args.ymin) if args.ymin is not None else None
     plt.ylim(ymax=args.ymax) if args.ymax is not None else None
+    plt.xlim(xmin=args.xmin) if args.xmin is not None else None
+    plt.xlim(xmax=args.xmax) if args.xmax is not None else None
     plt.xlabel(args.xlab) if args.xlab is not None else None
     plt.ylabel(args.ylab) if args.ylab is not None else None
     plt.title(args.title) if args.title is not None else None
@@ -110,8 +114,6 @@ class line:
         parser.add_argument(
             "--smooth", "-s", default=1, help="Window of moving average. Use float for percent of data"
         )
-        parser.add_argument("--xmin", default=None, type=float)
-        parser.add_argument("--xmax", default=None, type=float)
 
     @staticmethod
     def run(args):
@@ -135,8 +137,6 @@ class line:
             x = TRANSFORMS[args.x_transform](x)
             y = moving_average(y, smooth)
             plt.plot(x, y, label=key)
-        plt.xlim(xmin=args.xmin) if args.xmin is not None else None
-        plt.xlim(xmax=args.xmax) if args.xmax is not None else None
         if len(data) == 1:
             args.legend = False
         outplot(args)
@@ -163,6 +163,8 @@ class hist:
             series.append(np.asarray(d)[:, 0])
         bins = "auto" if args.bins is None else args.bins
         plt.hist(series, bins=bins, label=labels, histtype=args.histtype, log=args.log)
+        if len(data) == 1:
+            args.legend = False
         outplot(args)
 
 
