@@ -112,9 +112,6 @@ class line:
         )
         parser.add_argument("--xmin", default=None, type=float)
         parser.add_argument("--xmax", default=None, type=float)
-        parser.add_argument("--xlabel", default=None, type=str)
-        parser.add_argument("--ylabel", default=None, type=str)
-
 
     @staticmethod
     def run(args):
@@ -138,8 +135,6 @@ class line:
             x = TRANSFORMS[args.x_transform](x)
             y = moving_average(y, smooth)
             plt.plot(x, y, label=key)
-        if args.xlabel: plt.xlabel(args.xlabel)
-        if args.ylabel: plt.ylabel(args.ylabel)
         plt.xlim(xmin=args.xmin) if args.xmin is not None else None
         plt.xlim(xmax=args.xmax) if args.xmax is not None else None
         if len(data) == 1:
