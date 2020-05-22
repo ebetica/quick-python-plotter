@@ -114,6 +114,7 @@ class line:
         parser.add_argument("--xmax", default=None, type=float)
         parser.add_argument("--xlabel", default=None, type=str)
         parser.add_argument("--ylabel", default=None, type=str)
+        parser.add_argument("--title", default=None, type=str)
 
 
     @staticmethod
@@ -140,6 +141,7 @@ class line:
             plt.plot(x, y, label=key)
         if args.xlabel: plt.xlabel(args.xlabel)
         if args.ylabel: plt.ylabel(args.ylabel)
+        if args.title: plt.title(args.title)
         plt.xlim(xmin=args.xmin) if args.xmin is not None else None
         plt.xlim(xmax=args.xmax) if args.xmax is not None else None
         if len(data) == 1:
