@@ -141,6 +141,31 @@ class line:
             args.legend = False
         outplot(args)
 
+class scatter:
+    """
+    Takes in either a 1 or 2 tuple. 1 tuples are a list of y values, 2 tuples are x y values
+    """
+
+    @staticmethod
+    def args(parser):
+        plotargs(parser)
+
+    @staticmethod
+    def run(args):
+        data = read_data()
+        for key, series in data.items():
+            series = np.asarray(series)
+            assert series.shape[1] == 2
+            y = series[:, 1]
+            x = series[:, 0]
+
+            y = TRANSFORMS[args.y_transform](y)
+            x = TRANSFORMS[args.x_transform](x)
+            sns.regplot(x, y, label=key)
+        if len(data) == 1:
+            args.legend = False
+        outplot(args)
+
 
 class hist:
     @staticmethod
