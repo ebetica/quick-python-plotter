@@ -57,6 +57,7 @@ TRANSFORMS = {
     "none": lambda x: x,
     "log": lambda x: np.log10(x),
     "log1p": lambda x: np.log10(1 + x),
+    "log2": lambda x: np.log2(x),
 }
 
 
@@ -185,7 +186,9 @@ class hist:
         series = []
         for key, d in data.items():
             labels.append(key)
-            series.append(np.asarray(d)[:, 0])
+            array = np.asarray(d)[:, 0]
+            array = TRANSFORMS[args.x_transform](array)
+            series.append(array)
         bins = "auto" if args.bins is None else args.bins
         plt.hist(series, bins=bins, label=labels, histtype=args.histtype, log=args.log)
         if len(data) == 1:
