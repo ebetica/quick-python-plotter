@@ -154,6 +154,7 @@ class scatter:
     @staticmethod
     def args(parser):
         plotargs(parser)
+        parser.add_argument('--no-fit', default=False, action='store_true')
 
     @staticmethod
     def run(args):
@@ -166,7 +167,7 @@ class scatter:
 
             y = TRANSFORMS[args.y_transform](y)
             x = TRANSFORMS[args.x_transform](x)
-            sns.regplot(x, y, label=key)
+            sns.regplot(x, y, label=key, fit_reg=(not args.no_fit))
         if len(data) == 1:
             args.legend = False
         outplot(args)
