@@ -1,16 +1,20 @@
-#!python3
-import argparse
-import sys
-import inspect
-import shutil
-from os import path
-import matplotlib
+#!/usr/bin/env python3
+try:
+    import argparse
+    import sys
+    import inspect
+    import shutil
+    from os import path
+    import matplotlib
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import collections
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+    import collections
+except ImportError:
+    print("Only `qpp install_depedencies` is available due to missing dependencies")
+from subprocess import check_call
 
 
 def eprint(*args, **kwargs):
@@ -215,6 +219,16 @@ class heatmap:
         sns.heatmap(data, cmap="coolwarm", vmin=args.vmin, vmax=args.vmax, square=True).set_title(k)
         args.legend = False
         outplot(args)
+
+
+class install_dependencies:
+    @staticmethod
+    def args(parser):
+        pass
+
+    def run(args):
+        check_call([sys.executable, "-m", "pip", "install", "--user", "seaborn", "matplotlib", "numpy"])
+
 
 
 if __name__ == "__main__":
